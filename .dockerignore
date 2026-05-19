@@ -1,4 +1,6 @@
 *
 !src
+src/portal/node_modules
+src/portal/test
 !LICENSE
 !README.md

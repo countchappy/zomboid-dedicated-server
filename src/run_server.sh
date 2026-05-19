@@ -241,14 +241,38 @@ function set_variables() {
     SERVER_RULES_CONFIG="$CONFIG_DIR/Server/${SERVER_NAME}_SandboxVars.lua"
 }
 
+function prepare_server() {
+    set_variables
+    apply_preinstall_config
+    update_server
+    test_first_run
+    apply_postinstall_config
+}
+
+function run_server_foreground() {
+    set_variables
+    TIMEOUT=0
+
+    # Intercept termination signals to stop the server gracefully
+    trap shutdown SIGTERM SIGINT
+
+    start_server
+}
+
 ## Main
-set_variables
-apply_preinstall_config
-update_server
-test_first_run
-apply_postinstall_config
-
-# Intercept termination signals to stop the server gracefully
-trap shutdown SIGTERM SIGINT
-
-start_server
+case "${1:-all}" in
+    prepare)
+        prepare_server
+        ;;
+    start)
+        run_server_foreground
+        ;;
+    all)
+        prepare_server
+        run_server_foreground
+        ;;
+    *)
+        printf "\n### Unknown run_server.sh mode [%s]. Expected prepare, start, or all.\n" "$1" >&2
+        exit 64
+        ;;
+esac

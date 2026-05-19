@@ -23,8 +23,11 @@
 
 # Base Image
 ARG BASE_IMAGE="docker.io/renegademaster/steamcmd-minimal:2.0.0-root"
+ARG NODE_VERSION="24.15.0"
 
 FROM ${BASE_IMAGE}
+
+ARG NODE_VERSION
 
 # Add metadata labels
 LABEL com.renegademaster.zomboid-dedicated-server.authors="Renegade-Master" \
@@ -32,16 +35,41 @@ LABEL com.renegademaster.zomboid-dedicated-server.authors="Renegade-Master" \
     com.renegademaster.zomboid-dedicated-server.source-repository="https://github.com/Renegade-Master/zomboid-dedicated-server" \
     com.renegademaster.zomboid-dedicated-server.image-repository="https://hub.docker.com/renegademaster/zomboid-dedicated-server"
 
-# Copy the source files
-COPY src /home/steam/
-
-# Install Python, and take ownership of rcon binary
+# Install runtime dependencies and Node.js for the portal
 RUN sed -i 's|http://[^ ]*|http://old-releases.ubuntu.com/ubuntu|g' /etc/apt/sources.list \
     && apt-get update && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
-        python3-minimal iputils-ping tzdata \
+        ca-certificates curl iputils-ping python3-minimal tzdata xz-utils \
+    && node_arch="$(dpkg --print-architecture)" \
+    && case "$node_arch" in \
+        amd64) node_arch="x64" ;; \
+        arm64) node_arch="arm64" ;; \
+        *) echo "Unsupported Node.js architecture: $node_arch" >&2; exit 1 ;; \
+    esac \
+    && curl -fsSL "https://nodejs.org/download/release/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" -o /tmp/node.tar.xz \
+    && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 --no-same-owner \
+    && rm -f /tmp/node.tar.xz \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-# Run the setup script
-ENTRYPOINT ["/bin/bash", "/home/steam/run_server.sh"]
+# Copy the source files
+COPY src /home/steam/
+
+# Normalize scripts for Windows build contexts and ensure local builds do not
+# depend on Git preserving executable bits.
+RUN sed -i 's/\r$//' \
+        /home/steam/run_server.sh \
+        /home/steam/install_server.scmd \
+        /home/steam/edit_server_config.py \
+    && chmod +x \
+        /home/steam/run_server.sh \
+        /home/steam/install_server.scmd \
+        /home/steam/edit_server_config.py
+
+# Install the portal dependencies
+RUN cd /home/steam/portal \
+    && npm ci --omit=dev --ignore-scripts --loglevel=warn \
+    && npm cache clean --force
+
+# Run the portal, which supervises the Project Zomboid server
+ENTRYPOINT ["node", "/home/steam/portal/server.js"]

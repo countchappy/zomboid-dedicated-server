@@ -1,6 +1,9 @@
 ### User Additions ###
+.env
+docker-compose.yaml
 ZomboidConfig/
 ZomboidDedicatedServer/
+node_modules/
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/intellij+all,visualstudiocode

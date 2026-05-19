@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Project Zomboid Server Management</title>
+    <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="ops-header">
+      <nav class="container-fluid px-3 px-lg-4" aria-label="Portal">
+        <div class="ops-header-row">
+          <a class="brand-lockup" href="/" aria-label="Project Zomboid Server Portal home">
+            <span class="brand-mark" aria-hidden="true" data-icon="terminal"></span>
+            <span class="brand-copy">
+              <span class="brand-title">Project Zomboid</span>
+              <span class="brand-subtitle">Server Portal</span>
+            </span>
+          </a>
+
+          <div class="ops-header-controls">
+            <div id="headerStatusPill" class="status-pill status-unknown" role="status" aria-live="polite">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span id="headerStatusText">Unknown</span>
+            </div>
+
+            <div id="liveUpdateControl" class="live-update-control hidden">
+              <span id="liveStatus" class="connection-pill">Manual refresh</span>
+              <div class="form-check form-switch mb-0">
+                <input id="liveUpdatesSwitch" class="form-check-input" type="checkbox" role="switch">
+                <label class="form-check-label" for="liveUpdatesSwitch">Live updates</label>
+              </div>
+            </div>
+
+            <div class="btn-group btn-group-sm theme-toggle" role="group" aria-label="Theme">
+              <button type="button" class="btn btn-outline-secondary icon-button theme-choice" data-theme-choice="system" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Use system theme" aria-label="Use system theme" aria-pressed="false">
+                <span data-icon="monitor" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="btn btn-outline-secondary icon-button theme-choice" data-theme-choice="light" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Use light theme" aria-label="Use light theme" aria-pressed="false">
+                <span data-icon="sun" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="btn btn-outline-secondary icon-button theme-choice" data-theme-choice="dark" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Use dark theme" aria-label="Use dark theme" aria-pressed="false">
+                <span data-icon="moon" aria-hidden="true"></span>
+              </button>
+            </div>
+
+            <div id="accountMenu" class="dropdown hidden">
+              <button id="accountMenuButton" class="btn btn-sm btn-outline-secondary account-button dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                <span class="account-avatar" aria-hidden="true" data-icon="user"></span>
+                <span id="userLabel" class="account-name">Account</span>
+              </button>
+              <div class="dropdown-menu dropdown-menu-end account-menu">
+                <div class="dropdown-header">
+                  <div id="accountIdentity" class="account-identity">Signed in</div>
+                  <div id="accountProvider" class="account-provider text-body-secondary"></div>
+                </div>
+                <div class="dropdown-divider"></div>
+                <button id="changePasswordButton" type="button" class="dropdown-item hidden">
+                  <span data-icon="key-round" aria-hidden="true"></span>
+                  Change password
+                </button>
+                <button id="logoutButton" type="button" class="dropdown-item text-danger hidden">
+                  <span data-icon="log-out" aria-hidden="true"></span>
+                  Sign out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="portal-main">
+      <section id="appView" class="app-view hidden">
+        <div class="container-fluid px-3 px-lg-4">
+          <section class="ops-panel status-panel" aria-labelledby="overviewTitle">
+            <div class="status-copy">
+              <div class="section-eyebrow">Server state</div>
+              <h1 id="overviewTitle" class="status-title">Operations Dashboard</h1>
+              <p id="overviewSummary" class="status-summary">Waiting for status...</p>
+            </div>
+            <div class="overview-grid" aria-live="polite">
+              <div class="metric-tile metric-primary">
+                <div class="metric-label">Server</div>
+                <span id="overviewServerState" class="status-badge status-unknown">Unknown</span>
+              </div>
+              <div class="metric-tile">
+                <div class="metric-label">Ready</div>
+                <span id="overviewReadyState" class="status-badge status-unknown">Unknown</span>
+              </div>
+              <div class="metric-tile">
+                <div class="metric-label">Preparation</div>
+                <span id="overviewPreparationState" class="status-badge status-unknown">Unknown</span>
+              </div>
+              <div class="metric-tile">
+                <div class="metric-label">RCON</div>
+                <span id="overviewRconState" class="status-badge status-unknown">Unknown</span>
+              </div>
+              <div class="metric-tile">
+                <div class="metric-label">PID</div>
+                <span id="overviewPidState" class="metric-value">None</span>
+              </div>
+              <div class="metric-tile">
+                <div class="metric-label">Last exit</div>
+                <span id="overviewLastExitState" class="metric-value">None</span>
+              </div>
+            </div>
+          </section>
+
+          <div class="dashboard-grid">
+            <section id="actionsPanel" class="ops-panel actions-panel" aria-labelledby="actionsTitle">
+              <div class="panel-heading">
+                <div>
+                  <div class="section-eyebrow">Controls</div>
+                  <h2 id="actionsTitle" class="panel-title">Server actions</h2>
+                </div>
+                <span id="actionMessage" class="action-message" role="status"></span>
+              </div>
+
+              <div class="action-stack">
+                <button id="startButton" type="button" class="btn action-button action-start" data-action-button="start">
+                  <span data-icon="play" aria-hidden="true"></span>
+                  <span class="action-label">Start</span>
+                  <span class="action-spinner spinner-border spinner-border-sm hidden" aria-hidden="true"></span>
+                </button>
+                <button id="safeStopButton" type="button" class="btn action-button action-safe rcon-action hidden" data-action-button="safe_stop">
+                  <span data-icon="shield-alert" aria-hidden="true"></span>
+                  <span class="action-label">Safe Stop</span>
+                  <span class="action-spinner spinner-border spinner-border-sm hidden" aria-hidden="true"></span>
+                </button>
+                <button id="safeRestartButton" type="button" class="btn action-button action-safe rcon-action hidden" data-action-button="safe_restart">
+                  <span data-icon="rotate-ccw" aria-hidden="true"></span>
+                  <span class="action-label">Safe Restart</span>
+                  <span class="action-spinner spinner-border spinner-border-sm hidden" aria-hidden="true"></span>
+                </button>
+                <button id="stopButton" type="button" class="btn action-button action-danger direct-action" data-action-button="stop">
+                  <span data-icon="square" aria-hidden="true"></span>
+                  <span class="action-label">Stop Now</span>
+                  <span class="action-spinner spinner-border spinner-border-sm hidden" aria-hidden="true"></span>
+                </button>
+                <button id="restartButton" type="button" class="btn action-button action-secondary direct-action" data-action-button="restart">
+                  <span data-icon="refresh-cw" aria-hidden="true"></span>
+                  <span class="action-label">Restart Now</span>
+                  <span class="action-spinner spinner-border spinner-border-sm hidden" aria-hidden="true"></span>
+                </button>
+              </div>
+
+              <p id="actionHelp" class="action-help mb-0">Actions unlock when preparation is complete and the server is in a compatible state.</p>
+
+              <div id="immediateActionGroup" class="immediate-actions rcon-action hidden">
+                <button id="immediateActionsToggle" class="btn btn-link btn-sm px-0" type="button" data-bs-toggle="collapse" data-bs-target="#immediateActionsCollapse" aria-expanded="false" aria-controls="immediateActionsCollapse">
+                  Immediate actions
+                </button>
+                <div id="immediateActionsCollapse" class="collapse">
+                  <div class="immediate-action-grid pt-2">
+                    <button id="immediateStopButton" type="button" class="btn btn-outline-danger btn-sm" data-action-button="stop">
+                      <span data-icon="square" aria-hidden="true"></span>
+                      Stop Now
+                    </button>
+                    <button id="immediateRestartButton" type="button" class="btn btn-outline-danger btn-sm" data-action-button="restart">
+                      <span data-icon="refresh-cw" aria-hidden="true"></span>
+                      Restart Now
+                    </button>
+                  </div>
+                  <p class="immediate-note mb-0">Immediate actions skip player countdown warnings.</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="ops-panel flow-panel" aria-labelledby="flowTitle">
+              <div class="panel-heading">
+                <div>
+                  <div class="section-eyebrow">Action flow</div>
+                  <h2 id="flowTitle" class="panel-title">Server Status</h2>
+                  <p id="flowSummary" class="panel-summary">Waiting for status...</p>
+                </div>
+                <span id="busyBadge" class="busy-badge hidden"></span>
+              </div>
+              <div id="startupFlow" class="startup-flow" aria-live="polite"></div>
+            </section>
+
+          </div>
+
+          <section class="ops-panel operations-tabs-panel mt-3" aria-labelledby="operationsTabsTitle">
+            <div class="operations-tabs-header">
+              <div>
+                <div class="section-eyebrow">Workspace</div>
+                <h2 id="operationsTabsTitle" class="panel-title">Operations</h2>
+              </div>
+              <ul id="operationsTabs" class="nav nav-tabs operations-tabs-nav" role="tablist" aria-label="Operations">
+                <li class="nav-item" role="presentation">
+                  <button id="logsTabButton" class="nav-link active" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#logsTabPane" aria-controls="logsTabPane" aria-selected="true">Log tail</button>
+                </li>
+                <li id="serverStatusTabItem" class="nav-item hidden" role="presentation">
+                  <button id="serverStatusTabButton" class="nav-link" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#serverStatusPanel" aria-controls="serverStatusPanel" aria-selected="false">Server status</button>
+                </li>
+                <li id="rconTabItem" class="nav-item hidden" role="presentation">
+                  <button id="rconTabButton" class="nav-link" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#rconTerminalPanel" aria-controls="rconTerminalPanel" aria-selected="false">Command terminal</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button id="activityTabButton" class="nav-link" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#activityTabPane" aria-controls="activityTabPane" aria-selected="false">Recent activity</button>
+                </li>
+                <li id="userManagementTabItem" class="nav-item hidden" role="presentation">
+                  <button id="userManagementTabButton" class="nav-link" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#userManagementPanel" aria-controls="userManagementPanel" aria-selected="false">Local user management</button>
+                </li>
+              </ul>
+            </div>
+
+            <div class="tab-content operations-tab-content">
+              <div id="logsTabPane" class="tab-pane fade show active operations-tab-pane logs-panel" role="tabpanel" aria-labelledby="logsTabButton" tabindex="0">
+                <div class="log-toolbar">
+                  <div class="log-title-block">
+                    <div class="section-eyebrow">Observability</div>
+                    <h2 id="logsTitle" class="panel-title">Log tail</h2>
+                  </div>
+
+                  <div class="log-controls">
+                    <button id="refreshLogsButton" type="button" class="btn btn-sm btn-outline-secondary icon-button" aria-label="Refresh logs" data-bs-toggle="tooltip" data-bs-title="Refresh logs">
+                      <span data-icon="refresh-cw" aria-hidden="true"></span>
+                    </button>
+                    <div class="form-check form-switch mb-0">
+                      <input id="pauseAutoscrollSwitch" class="form-check-input" type="checkbox" role="switch">
+                      <label class="form-check-label" for="pauseAutoscrollSwitch">Pause</label>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                      <input id="wrapLogsSwitch" class="form-check-input" type="checkbox" role="switch" checked>
+                      <label class="form-check-label" for="wrapLogsSwitch">Wrap</label>
+                    </div>
+                    <select id="logSourceFilter" class="form-select form-select-sm log-source-filter" aria-label="Filter log source">
+                      <option value="">All sources</option>
+                    </select>
+                    <div class="input-group input-group-sm log-search-group">
+                      <span class="input-group-text" id="logSearchLabel" data-icon="search" aria-hidden="true"></span>
+                      <input id="logSearch" class="form-control" type="search" placeholder="Search visible logs" aria-label="Search visible logs" aria-describedby="logSearchLabel">
+                    </div>
+                    <button id="copyLogsButton" type="button" class="btn btn-sm btn-outline-secondary icon-text-button">
+                      <span data-icon="copy" aria-hidden="true"></span>
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <div id="logs" class="log-output wrap" role="log" aria-label="Server logs"></div>
+                <p id="logsEmpty" class="empty-state log-empty mb-0">No logs match the current filters.</p>
+              </div>
+
+              <div id="serverStatusPanel" class="tab-pane fade operations-tab-pane rcon-status-panel hidden" role="tabpanel" aria-labelledby="serverStatusTabButton" tabindex="0">
+                <div class="panel-heading">
+                  <div>
+                    <div class="section-eyebrow">RCON status</div>
+                    <h2 id="serverStatusTitle" class="panel-title">Server status</h2>
+                    <p id="serverStatusSummary" class="panel-summary">Waiting for RCON metrics...</p>
+                  </div>
+                  <div class="rcon-status-actions">
+                    <span id="serverStatusUpdatedAt" class="status-updated-at">Not updated</span>
+                    <button id="refreshServerStatusButton" type="button" class="btn btn-sm btn-outline-secondary icon-text-button" data-bs-toggle="tooltip" data-bs-title="Refresh server status">
+                      <span data-icon="refresh-cw" aria-hidden="true"></span>
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+
+                <div class="rcon-status-dashboard" aria-live="polite">
+                  <section id="rconMemoryCard" class="rcon-vital-card rcon-memory-card tone-unknown" aria-labelledby="rconMemoryTitle">
+                    <div class="rcon-vital-heading">
+                      <div>
+                        <div class="metric-label">System load</div>
+                        <h3 id="rconMemoryTitle" class="rcon-vital-title">Memory</h3>
+                      </div>
+                      <span id="rconMemoryTone" class="rcon-health-pill tone-unknown">Unknown</span>
+                    </div>
+                    <div id="rconMemoryGauge" class="memory-gauge" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Memory usage">
+                      <div class="memory-gauge-inner">
+                        <span id="rconMemoryPercent" class="memory-gauge-value">--%</span>
+                        <span class="memory-gauge-label">used</span>
+                      </div>
+                    </div>
+                    <div id="rconMemory" class="rcon-vital-value">Unknown</div>
+                    <div id="rconMemoryFree" class="rcon-vital-note">Waiting for memory metrics.</div>
+                  </section>
+
+                  <section id="rconFpsCard" class="rcon-vital-card rcon-fps-card tone-unknown" aria-labelledby="rconFpsTitle">
+                    <div class="rcon-vital-heading">
+                      <div>
+                        <div class="metric-label">Simulation</div>
+                        <h3 id="rconFpsTitle" class="rcon-vital-title">Frame rate</h3>
+                      </div>
+                      <span id="rconFpsTone" class="rcon-health-pill tone-unknown">Unknown</span>
+                    </div>
+                    <div class="fps-readout">
+                      <span id="rconFps" class="fps-value">Unknown</span>
+                      <span class="fps-unit">FPS</span>
+                    </div>
+                    <div class="rcon-meter" aria-hidden="true">
+                      <span id="rconFpsBar" class="rcon-meter-fill"></span>
+                    </div>
+                    <div id="rconFpsNote" class="rcon-vital-note">Waiting for simulation metrics.</div>
+                  </section>
+
+                  <section id="rconNetworkCard" class="rcon-vital-card rcon-network-card tone-unknown" aria-labelledby="rconNetworkTitle">
+                    <div class="rcon-vital-heading">
+                      <div>
+                        <div class="metric-label">Traffic</div>
+                        <h3 id="rconNetworkTitle" class="rcon-vital-title">Network</h3>
+                      </div>
+                      <span id="rconNetworkTone" class="rcon-health-pill tone-unknown">Unknown</span>
+                    </div>
+                    <div id="rconNetwork" class="rcon-vital-value">Unknown</div>
+                    <div class="network-meter-row">
+                      <span class="network-meter-label">Sent</span>
+                      <div class="rcon-meter" aria-hidden="true">
+                        <span id="rconNetworkSentBar" class="rcon-meter-fill"></span>
+                      </div>
+                      <span id="rconNetworkSentValue" class="network-meter-value">Unknown</span>
+                    </div>
+                    <div class="network-meter-row">
+                      <span class="network-meter-label">Received</span>
+                      <div class="rcon-meter" aria-hidden="true">
+                        <span id="rconNetworkReceivedBar" class="rcon-meter-fill"></span>
+                      </div>
+                      <span id="rconNetworkReceivedValue" class="network-meter-value">Unknown</span>
+                    </div>
+                    <div id="rconPacketLoss" class="rcon-vital-note">Packet loss unknown.</div>
+                  </section>
+
+                  <section class="rcon-world-panel" aria-labelledby="rconWorldTitle">
+                    <div class="rcon-world-heading">
+                      <div>
+                        <div class="metric-label">World pressure</div>
+                        <h3 id="rconWorldTitle" class="rcon-vital-title">Population</h3>
+                      </div>
+                    </div>
+                    <div class="rcon-world-grid">
+                      <article class="rcon-world-stat">
+                        <span class="rcon-world-label">Players online</span>
+                        <span id="rconPlayersOnline" class="rcon-world-value">Unknown</span>
+                      </article>
+                      <article class="rcon-world-stat">
+                        <span class="rcon-world-label">Zombies</span>
+                        <span id="rconZombiesTotal" class="rcon-world-value">Unknown</span>
+                      </article>
+                      <article class="rcon-world-stat">
+                        <span class="rcon-world-label">Kills today</span>
+                        <span id="rconZombiesKilledToday" class="rcon-world-value">Unknown</span>
+                      </article>
+                    </div>
+                    <div class="rcon-player-roster" aria-labelledby="rconPlayersTitle">
+                      <div class="rcon-player-roster-header">
+                        <h4 id="rconPlayersTitle" class="rcon-player-roster-title">Connected players</h4>
+                        <span id="rconPlayerCountLabel" class="rcon-player-count">Unknown</span>
+                      </div>
+                      <div id="rconPlayerList" class="rcon-player-list"></div>
+                      <p id="rconPlayersEmpty" class="empty-state mb-0">No connected players reported.</p>
+                    </div>
+                  </section>
+                </div>
+
+                <p id="serverStatusMessage" class="portal-message mb-3" role="status"></p>
+                <div id="rconStatusSections" class="rcon-status-sections"></div>
+                <p id="rconStatusEmpty" class="empty-state mb-0">No RCON status metrics are available.</p>
+              </div>
+
+              <div id="rconTerminalPanel" class="tab-pane fade operations-tab-pane rcon-terminal-panel hidden" role="tabpanel" aria-labelledby="rconTabButton" tabindex="0">
+                <div class="panel-heading">
+                  <div>
+                    <div class="section-eyebrow">Operator RCON</div>
+                    <h2 id="rconTerminalTitle" class="panel-title">Command terminal</h2>
+                    <p id="rconTerminalSummary" class="panel-summary">Portal terminal ready.</p>
+                  </div>
+                </div>
+                <section class="terminal-shell" aria-label="Command terminal">
+                  <div id="terminalPanelOutput" class="terminal-output" role="log" aria-live="polite"></div>
+                  <p id="terminalPanelEmpty" class="terminal-empty mb-0">pz-portal:~$</p>
+                  <form id="terminalPanelForm" class="terminal-input-form">
+                    <label class="visually-hidden" for="terminalPanelInput">Terminal command</label>
+                    <span class="terminal-prompt" aria-hidden="true">pz$</span>
+                    <input id="terminalPanelInput" class="terminal-input" autocomplete="off" spellcheck="false" placeholder="/servermsg &quot;Hello survivors&quot;">
+                    <button id="terminalPanelSubmit" type="submit" class="terminal-submit" aria-label="Send command" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Send command">
+                      <span data-icon="send" aria-hidden="true"></span>
+                    </button>
+                  </form>
+                </section>
+              </div>
+
+              <div id="activityTabPane" class="tab-pane fade operations-tab-pane activity-panel" role="tabpanel" aria-labelledby="activityTabButton" tabindex="0">
+                <div class="panel-heading">
+                  <div>
+                    <div class="section-eyebrow">Audit</div>
+                    <h2 id="activityTitle" class="panel-title">Recent activity</h2>
+                  </div>
+                  <button id="refreshActivityButton" type="button" class="btn btn-sm btn-outline-secondary icon-text-button" data-bs-toggle="tooltip" data-bs-title="Refresh activity">
+                    <span data-icon="refresh-cw" aria-hidden="true"></span>
+                    Refresh
+                  </button>
+                </div>
+                <div id="activityList" class="activity-list" aria-live="polite"></div>
+                <p id="activityEmpty" class="empty-state mb-0">No recent actions recorded.</p>
+              </div>
+
+              <div id="userManagementPanel" class="tab-pane fade operations-tab-pane user-management-panel hidden" role="tabpanel" aria-labelledby="userManagementTabButton" tabindex="0">
+                <div class="panel-heading">
+                  <div>
+                    <div class="section-eyebrow">Access</div>
+                    <h2 id="usersTitle" class="panel-title">Local users</h2>
+                    <p class="panel-summary">Manage portal accounts for local authentication.</p>
+                  </div>
+                  <button id="createUserButton" type="button" class="btn btn-sm btn-primary icon-text-button">
+                    <span data-icon="plus" aria-hidden="true"></span>
+                    Create
+                  </button>
+                </div>
+                <div id="usersTable" class="users-table" aria-live="polite"></div>
+                <p id="usersEmpty" class="empty-state mb-0">No local users found.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal fade" id="actionConfirmModal" tabindex="-1" aria-labelledby="confirmActionTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content portal-modal">
+          <div class="modal-header">
+            <div>
+              <div class="section-eyebrow">Confirmation</div>
+              <h1 id="confirmActionTitle" class="modal-title fs-5">Confirm Action</h1>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p id="confirmActionBody" class="mb-2"></p>
+            <p id="confirmActionWarning" class="confirm-warning mb-3"></p>
+            <div id="confirmActionMeta" class="confirm-meta mb-3"></div>
+            <div class="form-check update-check">
+              <input id="checkUpdatesSwitch" class="form-check-input" type="checkbox">
+              <label id="checkUpdatesLabel" class="form-check-label" for="checkUpdatesSwitch">
+                Run SteamCMD update check
+              </label>
+            </div>
+            <div id="countdownControlGroup" class="countdown-control hidden">
+              <div class="countdown-control-header">
+                <label id="countdownControlLabel" for="countdownSecondsRange">Player warning countdown</label>
+                <span id="countdownSecondsValue" class="countdown-value">5 minutes</span>
+              </div>
+              <input id="countdownSecondsRange" class="form-range" type="range" min="60" max="900" step="60" value="300">
+              <div class="countdown-scale" aria-hidden="true">
+                <span>1 min</span>
+                <span>15 min</span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button id="confirmActionButton" type="button" class="btn btn-danger">
+              <span class="confirm-label">Confirm</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content portal-modal">
+          <form id="changePasswordForm" novalidate>
+            <div class="modal-header">
+              <div>
+                <div class="section-eyebrow">Local account</div>
+                <h1 id="changePasswordTitle" class="modal-title fs-5">Change Password</h1>
+              </div>
+              <button id="changePasswordCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label for="currentPassword" class="form-label">Current password</label>
+                <div class="input-group">
+                  <input id="currentPassword" name="currentPassword" class="form-control" type="password" autocomplete="current-password" required>
+                  <button class="btn btn-outline-secondary password-toggle" type="button" data-target-input="currentPassword" aria-label="Show current password" data-bs-toggle="tooltip" data-bs-title="Show password">
+                    <span data-icon="eye" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="newPassword" class="form-label">New password</label>
+                <div class="input-group">
+                  <input id="newPassword" name="newPassword" class="form-control" type="password" autocomplete="new-password" minlength="8" required>
+                  <button class="btn btn-outline-secondary password-toggle" type="button" data-target-input="newPassword" aria-label="Show new password" data-bs-toggle="tooltip" data-bs-title="Show password">
+                    <span data-icon="eye" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label for="confirmNewPassword" class="form-label">Confirm new password</label>
+                <div class="input-group">
+                  <input id="confirmNewPassword" name="confirmNewPassword" class="form-control" type="password" autocomplete="new-password" minlength="8" required>
+                  <button class="btn btn-outline-secondary password-toggle" type="button" data-target-input="confirmNewPassword" aria-label="Show confirmed password" data-bs-toggle="tooltip" data-bs-title="Show password">
+                    <span data-icon="eye" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </div>
+              <p id="changePasswordMessage" class="portal-message mt-3 mb-0" role="status"></p>
+            </div>
+            <div class="modal-footer">
+              <button id="changePasswordLogoutButton" type="button" class="btn btn-outline-danger hidden">Log out</button>
+              <button id="changePasswordCancelButton" type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button id="savePasswordButton" type="submit" class="btn btn-primary">Save password</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content portal-modal">
+          <form id="createUserForm" novalidate>
+            <div class="modal-header">
+              <div>
+                <div class="section-eyebrow">Local account</div>
+                <h1 id="createUserTitle" class="modal-title fs-5">Create User</h1>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label for="newUserUsername" class="form-label">Username</label>
+                <input id="newUserUsername" name="username" class="form-control" autocomplete="off" minlength="3" maxlength="64" required>
+              </div>
+              <div>
+                <label for="newUserRole" class="form-label">Permission level</label>
+                <select id="newUserRole" name="role" class="form-select" required>
+                  <option value="read_only">Read only</option>
+                  <option value="admin">Admin</option>
+                  <option value="operator">Operator</option>
+                </select>
+              </div>
+              <p id="createUserMessage" class="portal-message mt-3 mb-0" role="status"></p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button id="createUserSubmitButton" type="submit" class="btn btn-primary">Create user</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="initialPasswordModal" tabindex="-1" aria-labelledby="initialPasswordTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content portal-modal">
+          <div class="modal-header">
+            <div>
+              <div class="section-eyebrow">Initial password</div>
+              <h1 id="initialPasswordTitle" class="modal-title fs-5">User Created</h1>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p id="initialPasswordIntro" class="mb-2"></p>
+            <code id="initialPasswordCode" class="password-code-box"></code>
+            <p class="portal-message mt-3 mb-0">This password is shown once. The user must change it after login.</p>
+          </div>
+          <div class="modal-footer">
+            <button id="copyInitialPasswordButton" type="button" class="btn btn-outline-secondary icon-text-button">
+              <span data-icon="copy" aria-hidden="true"></span>
+              Copy
+            </button>
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="editUserRoleModal" tabindex="-1" aria-labelledby="editUserRoleTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content portal-modal">
+          <form id="editUserRoleForm" novalidate>
+            <div class="modal-header">
+              <div>
+                <div class="section-eyebrow">Permissions</div>
+                <h1 id="editUserRoleTitle" class="modal-title fs-5">Update User</h1>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <input id="editUserId" name="id" type="hidden">
+              <p id="editUserRoleIntro" class="mb-3"></p>
+              <label for="editUserRole" class="form-label">Permission level</label>
+              <select id="editUserRole" name="role" class="form-select" required>
+                <option value="read_only">Read only</option>
+                <option value="admin">Admin</option>
+                <option value="operator">Operator</option>
+              </select>
+              <p id="editUserRoleMessage" class="portal-message mt-3 mb-0" role="status"></p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button id="saveUserRoleButton" type="submit" class="btn btn-primary">Save role</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content portal-modal">
+          <div class="modal-header">
+            <div>
+              <div class="section-eyebrow">Delete account</div>
+              <h1 id="deleteUserTitle" class="modal-title fs-5">Delete User</h1>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p id="deleteUserBody" class="mb-0"></p>
+            <p id="deleteUserMessage" class="portal-message mt-3 mb-0" role="status"></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button id="confirmDeleteUserButton" type="button" class="btn btn-danger">Delete user</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button id="terminalLauncherButton" type="button" class="terminal-launcher hidden" aria-label="Open terminal" aria-keyshortcuts="Control+` Meta+`" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Open terminal (Ctrl+`)">
+      <span data-icon="terminal" aria-hidden="true"></span>
+    </button>
+
+    <div id="terminalModeOverlay" class="terminal-mode-overlay hidden" aria-hidden="true"></div>
+    <section id="terminalDrawer" class="terminal-drawer hidden" role="dialog" aria-modal="true" aria-labelledby="terminalDrawerTitle">
+      <div class="terminal-drawer-header">
+        <div>
+          <div class="section-eyebrow">Terminal mode</div>
+          <h2 id="terminalDrawerTitle" class="terminal-drawer-title">Command terminal</h2>
+        </div>
+        <button id="terminalDrawerCloseButton" type="button" class="terminal-drawer-close" aria-label="Close terminal" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Close terminal">
+          <span data-icon="x-circle" aria-hidden="true"></span>
+        </button>
+      </div>
+      <section class="terminal-shell terminal-shell-drawer" aria-label="Terminal mode command terminal">
+        <div id="terminalDrawerOutput" class="terminal-output" role="log" aria-live="polite"></div>
+        <p id="terminalDrawerEmpty" class="terminal-empty mb-0">pz-portal:~$</p>
+        <form id="terminalDrawerForm" class="terminal-input-form">
+          <label class="visually-hidden" for="terminalDrawerInput">Terminal command</label>
+          <span class="terminal-prompt" aria-hidden="true">pz$</span>
+          <input id="terminalDrawerInput" class="terminal-input" autocomplete="off" spellcheck="false" placeholder="!help">
+          <button id="terminalDrawerSubmit" type="submit" class="terminal-submit" aria-label="Send command" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Send command">
+            <span data-icon="send" aria-hidden="true"></span>
+          </button>
+        </form>
+      </section>
+    </section>
+
+    <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+    <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/portal-common.js"></script>
+    <script src="/ui-state.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -71,17 +71,24 @@ jobs:
         continue-on-error: true
         timeout-minutes: 10
         run: |
-          # Start a timed shutdown signal
-          (sleep 360 && docker exec \
-            zomboid-dedicated-server bash -c \
-              "rcon -a $(cat ZomboidConfig/ip.txt):\${RCON_PORT} -p \${RCON_PASSWORD} quit") &
+          wait_for_log() {
+            local pattern="$1"
+            for _ in $(seq 1 420); do
+              docker logs zomboid-dedicated-server > ./docker-log.log 2>&1 || true
+              if grep -q -iE "$pattern" ./docker-log.log; then
+                return 0
+              fi
+              sleep 1
+            done
+            return 1
+          }
 
-          # Run the Docker Image
           docker run \
-            --rm \
+            --detach \
             --name zomboid-dedicated-server \
             --mount type=bind,source="$(pwd)/ZomboidDedicatedServer",target=/home/steam/ZomboidDedicatedServer \
             --mount type=bind,source="$(pwd)/ZomboidConfig",target=/home/steam/Zomboid \
+            --publish 8080:8080/tcp \
             --env=AUTOSAVE_INTERVAL="16" \
             --env=DEFAULT_PORT="25496" \
             --env=GC_CONFIG="G1GC" \
@@ -91,14 +98,36 @@ jobs:
             --env=MOD_NAMES="BedfordFalls" \
             --env=MOD_WORKSHOP_IDS="522891356" \
             --env=PAUSE_ON_EMPTY="true" \
+            --env=PORTAL_ADMIN_PASSWORD="portal_action_test_password" \
+            --env=PORTAL_SESSION_SECRET="github_action_test_portal_session_secret" \
             --env=PUBLIC_SERVER="false" \
             --env=RCON_PASSWORD="github_action_test_rcon_password" \
             --env=RCON_PORT="27025" \
             --env=SERVER_NAME="GitHubActionTest" \
             --env=SERVER_PASSWORD="github_action_test_password" \
             --env=UDP_PORT="25499" \
-            docker.io/renegademaster/zomboid-dedicated-server:${{ steps.variables.outputs.datetime }} \
-            2>&1 | tee ./docker-log.log
+            docker.io/renegademaster/zomboid-dedicated-server:${{ steps.variables.outputs.datetime }}
+
+          wait_for_log "LuaNet: Initialization \[DONE\]"
+
+          curl -fsS \
+            --cookie-jar ./portal.cookies \
+            --header "content-type: application/json" \
+            --data '{"username":"admin","password":"portal_action_test_password"}' \
+            http://127.0.0.1:8080/api/auth/login
+
+          curl -fsS \
+            --cookie ./portal.cookies \
+            http://127.0.0.1:8080/api/server/status
+
+          curl -fsS \
+            --cookie ./portal.cookies \
+            --header "content-type: application/json" \
+            --data '{"action":"stop"}' \
+            http://127.0.0.1:8080/api/server/actions
+
+          wait_for_log "ZNet: SZombienet -> SSteamSDK: LogOff"
+          docker rm --force zomboid-dedicated-server
 
       ###############################
       # Docker-Compose Build System #
@@ -114,6 +143,8 @@ jobs:
           sed -i "s/MAX_RAM=.*m\"/MAX_RAM=6144m\"/g" "./docker-compose.yaml"
           sed -i "s/MOD_NAMES=.*\"/MOD_NAMES=BedfordFalls\"/g" "./docker-compose.yaml"
           sed -i "s/MOD_WORKSHOP_IDS=.*\"/MOD_WORKSHOP_IDS=522891356\"/g" "./docker-compose.yaml"
+          sed -i "s/PORTAL_ADMIN_PASSWORD=.*\"/PORTAL_ADMIN_PASSWORD=portal_action_test_password\"/g" "./docker-compose.yaml"
+          sed -i "s/PORTAL_SESSION_SECRET=.*\"/PORTAL_SESSION_SECRET=github_action_test_portal_session_secret\"/g" "./docker-compose.yaml"
           sed -i "s/PUBLIC_SERVER=.*/PUBLIC_SERVER=false\"/g" "./docker-compose.yaml"
           sed -i "s/RCON_PASSWORD=.*/RCON_PASSWORD=github_action_test_rcon_password\"/g" "./docker-compose.yaml"
           sed -i "s/RCON_PORT=.*\"/RCON_PORT=27025\"/g" "./docker-compose.yaml"
@@ -133,14 +164,41 @@ jobs:
         continue-on-error: true
         timeout-minutes: 10
         run: |
-          # Start a timed shutdown signal
-          (sleep 360 && docker exec \
-            zomboid-dedicated-server bash -c \
-              "rcon -a $(cat ZomboidConfig/ip.txt):\${RCON_PORT} -p \${RCON_PASSWORD} quit") &
+          wait_for_log() {
+            local pattern="$1"
+            for _ in $(seq 1 420); do
+              docker-compose logs > ./docker-log.log 2>&1 || true
+              if grep -q -iE "$pattern" ./docker-log.log; then
+                return 0
+              fi
+              sleep 1
+            done
+            return 1
+          }
 
-          # Run the Docker-Compose Image
-          docker-compose up \
-            2>&1 | tee ./docker-log.log
+          docker-compose up --detach
+
+          wait_for_log "LuaNet: Initialization \[DONE\]"
+
+          curl -fsS \
+            --cookie-jar ./portal.cookies \
+            --header "content-type: application/json" \
+            --data '{"username":"admin","password":"portal_action_test_password"}' \
+            http://127.0.0.1:8080/api/auth/login
+
+          curl -fsS \
+            --cookie ./portal.cookies \
+            http://127.0.0.1:8080/api/server/status
+
+          curl -fsS \
+            --cookie ./portal.cookies \
+            --header "content-type: application/json" \
+            --data '{"action":"stop"}' \
+            http://127.0.0.1:8080/api/server/actions
+
+          wait_for_log "ZNet: SZombienet -> SSteamSDK: LogOff"
+          docker-compose logs > ./docker-log.log
+          docker-compose down
 
       #######################
       # Podman Build System #
@@ -158,17 +216,24 @@ jobs:
         continue-on-error: true
         timeout-minutes: 10
         run: |
-          # Start a timed shutdown signal
-          (sleep 360 && podman exec \
-            zomboid-dedicated-server bash -c \
-              "rcon -a $(cat ZomboidConfig/ip.txt):\${RCON_PORT} -p \${RCON_PASSWORD} quit") &
+          wait_for_log() {
+            local pattern="$1"
+            for _ in $(seq 1 420); do
+              podman logs zomboid-dedicated-server > ./docker-log.log 2>&1 || true
+              if grep -q -iE "$pattern" ./docker-log.log; then
+                return 0
+              fi
+              sleep 1
+            done
+            return 1
+          }
 
-          # Run the Podman Image
           podman run \
-            --rm \
+            --detach \
             --name zomboid-dedicated-server \
             --mount type=bind,source="$(pwd)/ZomboidDedicatedServer",target=/home/steam/ZomboidDedicatedServer \
             --mount type=bind,source="$(pwd)/ZomboidConfig",target=/home/steam/Zomboid \
+            --publish 8080:8080/tcp \
             --env=AUTOSAVE_INTERVAL="16" \
             --env=DEFAULT_PORT="25496" \
             --env=GC_CONFIG="G1GC" \
@@ -178,14 +243,36 @@ jobs:
             --env=MOD_NAMES="BedfordFalls" \
             --env=MOD_WORKSHOP_IDS="522891356" \
             --env=PAUSE_ON_EMPTY="true" \
+            --env=PORTAL_ADMIN_PASSWORD="portal_action_test_password" \
+            --env=PORTAL_SESSION_SECRET="github_action_test_portal_session_secret" \
             --env=PUBLIC_SERVER="false" \
             --env=RCON_PASSWORD="github_action_test_rcon_password" \
             --env=RCON_PORT="27025" \
             --env=SERVER_NAME="GitHubActionTest" \
             --env=SERVER_PASSWORD="github_action_test_password" \
             --env=UDP_PORT="25499" \
-            docker.io/renegademaster/zomboid-dedicated-server:${{ steps.variables.outputs.datetime }} \
-            2>&1 | tee ./docker-log.log
+            docker.io/renegademaster/zomboid-dedicated-server:${{ steps.variables.outputs.datetime }}
+
+          wait_for_log "LuaNet: Initialization \[DONE\]"
+
+          curl -fsS \
+            --cookie-jar ./portal.cookies \
+            --header "content-type: application/json" \
+            --data '{"username":"admin","password":"portal_action_test_password"}' \
+            http://127.0.0.1:8080/api/auth/login
+
+          curl -fsS \
+            --cookie ./portal.cookies \
+            http://127.0.0.1:8080/api/server/status
+
+          curl -fsS \
+            --cookie ./portal.cookies \
+            --header "content-type: application/json" \
+            --data '{"action":"stop"}' \
+            http://127.0.0.1:8080/api/server/actions
+
+          wait_for_log "ZNet: SZombienet -> SSteamSDK: LogOff"
+          podman rm --force zomboid-dedicated-server
 
       - name: Investigate File Structure
         run: |

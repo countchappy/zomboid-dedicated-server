@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Project Zomboid Server Portal</title>
+    <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="ops-header">
+      <nav class="container-fluid px-3 px-lg-4" aria-label="Portal">
+        <div class="ops-header-row">
+          <a class="brand-lockup" href="/" aria-label="Project Zomboid Server Portal home">
+            <span class="brand-mark" aria-hidden="true" data-icon="terminal"></span>
+            <span class="brand-copy">
+              <span class="brand-title">Project Zomboid</span>
+              <span class="brand-subtitle">Server Portal</span>
+            </span>
+          </a>
+
+          <div class="ops-header-controls">
+            <div id="headerStatusPill" class="status-pill status-unknown" role="status" aria-live="polite">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span id="headerStatusText">Unknown</span>
+            </div>
+
+            <div class="btn-group btn-group-sm theme-toggle" role="group" aria-label="Theme">
+              <button type="button" class="btn btn-outline-secondary icon-button theme-choice" data-theme-choice="system" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Use system theme" aria-label="Use system theme" aria-pressed="false">
+                <span data-icon="monitor" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="btn btn-outline-secondary icon-button theme-choice" data-theme-choice="light" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Use light theme" aria-label="Use light theme" aria-pressed="false">
+                <span data-icon="sun" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="btn btn-outline-secondary icon-button theme-choice" data-theme-choice="dark" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Use dark theme" aria-label="Use dark theme" aria-pressed="false">
+                <span data-icon="moon" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="portal-main">
+      <section class="container-fluid px-3 px-lg-4 login-view" aria-labelledby="publicServerName">
+        <div class="public-landing">
+          <section class="ops-panel public-status-panel" aria-labelledby="publicServerName">
+            <div class="public-status-copy">
+              <div class="section-eyebrow">Public server status</div>
+              <h1 id="publicServerName" class="public-title">Project Zomboid Server</h1>
+              <p id="publicDescription" class="public-description hidden"></p>
+              <div class="public-status-row">
+                <div id="publicStatusPill" class="status-pill status-unknown" role="status" aria-live="polite">
+                  <span class="status-dot" aria-hidden="true"></span>
+                  <span id="publicStatusText">Loading</span>
+                </div>
+                <span id="publicReadyState" class="status-badge status-unknown">Unknown</span>
+              </div>
+              <p id="publicStatusMessage" class="public-status-message" role="status">Loading public server status...</p>
+              <div id="publicMetricsGrid" class="public-metrics-grid" aria-live="polite">
+                <div class="public-metric">
+                  <span class="metric-label">Players online</span>
+                  <span id="publicPlayersOnline" class="metric-value">Unknown</span>
+                </div>
+                <div class="public-metric">
+                  <span class="metric-label">Zombies</span>
+                  <span id="publicZombiesTotal" class="metric-value">Unknown</span>
+                </div>
+                <div class="public-metric">
+                  <span class="metric-label">Kills today</span>
+                  <span id="publicZombiesKilledToday" class="metric-value">Unknown</span>
+                </div>
+              </div>
+              <p id="publicMetricsFreshness" class="public-metrics-freshness hidden"></p>
+            </div>
+          </section>
+
+          <aside class="login-panel public-admin-panel" aria-labelledby="loginTitle">
+            <div class="login-kicker">Admin access</div>
+            <h2 id="loginTitle" class="login-title">Sign in</h2>
+            <p class="login-copy">Server controls, logs, and audit activity require an admin session.</p>
+
+            <form id="loginForm" class="vstack gap-3" novalidate>
+              <div>
+                <label for="username" class="form-label">Username</label>
+                <input id="username" name="username" class="form-control form-control-lg" autocomplete="username" required>
+              </div>
+              <div>
+                <label for="password" class="form-label">Password</label>
+                <div class="input-group input-group-lg">
+                  <input id="password" name="password" class="form-control" type="password" autocomplete="current-password" required>
+                  <button id="loginPasswordToggle" class="btn btn-outline-secondary password-toggle" type="button" data-target-input="password" aria-label="Show password" data-bs-toggle="tooltip" data-bs-title="Show password">
+                    <span data-icon="eye" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-lg w-100">
+                <span data-icon="log-in" aria-hidden="true"></span>
+                Sign in
+              </button>
+            </form>
+
+            <a id="externalLogin" class="btn btn-primary btn-lg w-100 hidden" href="/auth/login?redirect=%2Fmanage">
+              <span data-icon="shield-check" aria-hidden="true"></span>
+              Sign in with identity provider
+            </a>
+            <p id="loginMessage" class="portal-message mt-3 mb-0" role="status"></p>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/portal-common.js"></script>
+    <script src="/landing.js"></script>
+  </body>
+</html>
