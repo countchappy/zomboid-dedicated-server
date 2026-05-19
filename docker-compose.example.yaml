@@ -40,6 +40,25 @@ services:
       - "MOD_NAMES="
       - "MOD_WORKSHOP_IDS="
       - "PAUSE_ON_EMPTY=true"
+      - "PORTAL_ADMIN_PASSWORD=changeme_portal"
+      - "PORTAL_ADMIN_USERNAME=admin"
+      - "PORTAL_AUTH_PROVIDER=local"
+      - "PORTAL_AUTO_START=true"
+      - "PORTAL_DB_PATH=/home/steam/Zomboid/portal/portal.sqlite"
+      - "PORTAL_HOST=0.0.0.0"
+      - "PORTAL_LOG_LINES=1000"
+      - "PORTAL_PORT=8080"
+      - "PORTAL_PUBLIC_DESCRIPTION="
+      - "PORTAL_PUBLIC_SERVER_NAME=Project Zomboid Server"
+      - "PORTAL_RCON_BINARY=rcon"
+      - "PORTAL_RCON_HOST="
+      - "PORTAL_RCON_HOST_FILE=/home/steam/Zomboid/ip.txt"
+      - "PORTAL_SAFE_ACTION_COUNTDOWN_SECONDS=300"
+      # Set to true when the portal is served through HTTPS, for example behind Apache or another reverse proxy.
+      - "PORTAL_SECURE_COOKIES=false"
+      - "PORTAL_SESSION_COOKIE=pz_portal_session"
+      - "PORTAL_SESSION_SECRET=change_this_portal_session_secret"
+      - "PORTAL_SESSION_TTL_SECONDS=43200"
       - "PUBLIC_SERVER=true"
       - "RCON_PASSWORD=changeme_rcon"
       - "RCON_PORT=27015"
@@ -58,6 +77,9 @@ services:
         protocol: udp
       - target: 27015
         published: 27015
+        protocol: tcp
+      - target: 8080
+        published: 8080
         protocol: tcp
     volumes:
       - ./ZomboidDedicatedServer:/home/steam/ZomboidDedicatedServer
